@@ -1,7 +1,7 @@
 # VBA RunPE
 
 ## Description 
-A simple yet effective implementation of the RunPE technique in VBA. This code can be used to run executables from the memory of Word or Excel. It is compatible with both 32 bits and 64 bits of Microsoft Office 2010 and above.   
+A simple yet effective implementation of the RunPE technique in VBA. This code can be used to run executables from the memory of Word or Excel. It is compatible with both 32 bits and 64 bits versions of Microsoft Office 2010 and above.   
 
 
 ![Win10_x64_Office2016_x64_PowerShell](https://github.com/itm4n/VBA-RunPE/raw/master/screenshots/01_Win10_x64_Office2016_x64_PowerShell.png)
