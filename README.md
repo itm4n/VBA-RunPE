@@ -24,8 +24,8 @@ This will be used to form a command line equivalent to:
 ```
 C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -exec Bypass
 ```
-2) Enable __View__ > __Immediate Window__ (Ctrl + G) (to check execution and error logs).
-3) Run the macro!
+3) Enable __View__ > __Immediate Window__ (Ctrl + G) to check execution and error logs.
+4) Run the macro!
 
 ## Credits
 This code is mainly a VBA adaptation of the C++ implementation published by @Zer0Mem0ry (32 bits only).
