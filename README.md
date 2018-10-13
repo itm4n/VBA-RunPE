@@ -1,13 +1,12 @@
 # VBA RunPE
 
 ## Description 
-A simple yet effective implementation of the RunPE technique in VBA. This code can be used to run executables from the memory of Word or Excel. It is compatible with both 32 bits and 64 bits versions of Microsoft Office 2010 and above.   
-
+A simple yet effective implementation of the RunPE technique in VBA. This code can be used to run executables from the memory of Word or Excel. It is compatible with both 32 bits and 64 bits versions of Microsoft Office 2010 and above. 
 
 ![Win10_x64_Office2016_x64_PowerShell](https://github.com/itm4n/VBA-RunPE/raw/master/screenshots/01_Win10_x64_Office2016_x64_PowerShell.png)
 
-## Usage
-1) In the ___Exploit___ procedure at the end of the code, set the path of the file you want to execute. 
+## Usage 1 - PE file on disk 
+1) In the `Exploit` procedure at the end of the code, set the path of the file you want to execute. 
 ```
 strSrcFile = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 ```
@@ -27,9 +26,35 @@ C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -exec Bypass
 3) Enable __View__ > __Immediate Window__ (Ctrl + G) to check execution and error logs.
 4) Run the macro!
 
+## Usage 2 - Embedded PE 
+1) Use `pe2vba.py` to convert a PE file to VBA. This way, it can be directly embedded into the macro. 
+```
+user@host:~$ python pe2vba.py meterpreter.exe 
+[+] Created file 'meterpreter.exe.vba'.
+```
+2) Replace the following code in `RunPE.vba` with the the content of the `.vba` file which was generated in the previous step.
+```
+' ================================================================================
+'                                ~~~ EMBEDDED PE ~~~
+' ================================================================================
+
+' CODE GENRATED BY PE2VBA
+Private Function PE() As String
+    Dim strPE As String
+    strPE = ""
+    PE = strPE
+End Function
+```
+3) Enable __View__ > __Immediate Window__ (Ctrl + G) to check execution and error logs.
+4) Run the macro!
+
+__/!\\__ When using an embedded PE, the macro will automatically switch to this mode because the `PE()` method will return a non-empty string. 
+
 ## Credits
 This code is mainly a VBA adaptation of the C++ implementation published by @Zer0Mem0ry (32 bits only).
 https://github.com/Zer0Mem0ry/RunPE
+
+The PE embedding method was inspired by @DidierStevens' work. https://blog.didierstevens.com/
 
 ## Misc
 
