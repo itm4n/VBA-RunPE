@@ -1,3 +1,5 @@
+#!/usr/bin/env python3 
+
 from subprocess import Popen, PIPE 
 from os import system, remove
 from os.path import isfile
@@ -98,7 +100,7 @@ def main():
   
   # Check whether input file exist 
   if not isfile(args.pe_file):
-    print "[!] '%s' doesn't exist!" % (args.pe_file) 
+    print("[!] '%s' doesn't exist!" % (args.pe_file))
     return 
 
   # Read the file 
@@ -113,7 +115,7 @@ def main():
   out_file.close()
   
   if isfile(out_filename): 
-    print "[+] Created file '%s'." % (out_filename)
+    print("[+] Created file '%s'." % (out_filename))
   
   return 
 
