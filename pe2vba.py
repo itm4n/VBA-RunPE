@@ -2,11 +2,13 @@
 
 from subprocess import Popen, PIPE 
 from os import system, remove
-from os.path import isfile
 import argparse
+import os.path
 
 MAX_PROC_SIZE = 50 # Nbr of lines per procedure 
 MAX_LINE_SIZE = 50 # Nbr of bytes per line
+TAG_PE2VBA_BEGIN = "' ===== BEGIN PE2VBA ====="
+TAG_PE2VBA_END = "' ===== END PE2VBA ====="
 
 def is_printable(c):
   # All characters from SPACE to ~ are printable ASCII.
@@ -91,15 +93,48 @@ def pe_to_vba(pe):
   
   return vba 
 
+def apply_template(pe_as_vba):
+  res = ""
+  
+  tmpl_dir = os.path.dirname(os.path.realpath(__file__))
+  tmpl_filepath = os.path.join(tmpl_dir, "RunPE.vba") 
+  
+  if os.path.isfile(tmpl_filepath):
+  
+    tmpl_file = open(tmpl_filepath , "r") 
+    concat_line = True
+    
+    for line in tmpl_file:
+      cur_line = line.rstrip()
+      
+      if cur_line == TAG_PE2VBA_END:
+        concat_line = True 
+        
+      if concat_line:
+        res += line 
+      
+      if cur_line == TAG_PE2VBA_BEGIN:  
+        concat_line = False 
+        res += pe_as_vba 
+    
+    tmpl_file.close() 
+      
+  else:
+    print("[!] Cannot find file: '%s'" % tmpl_filepath) 
+  
+  return res
+  
+
 def main():
 
   # Parse command line arguments and options
   parser = argparse.ArgumentParser(description="PE to VBA file converter")
   parser.add_argument("pe_file", help="PE file to convert.")
+  parser.add_argument("-r", "--raw", action="store_true", help="PE to VBA only (don't apply the RunPE template)")
   args = parser.parse_args()
   
   # Check whether input file exist 
-  if not isfile(args.pe_file):
+  if not os.path.isfile(args.pe_file):
     print("[!] '%s' doesn't exist!" % (args.pe_file))
     return 
 
@@ -108,13 +143,22 @@ def main():
   pe = pe_file.read() 
   pe_file.close() 
   
-  # Convert the file to VBA and write to file 
+  # Convert the file to VBA
+  pe_as_vba = pe_to_vba(pe) 
+  
+  if args.raw:
+    out_file_content = pe_as_vba
+  else:
+    # Insert the generated code into the RunPE.vba template 
+    out_file_content = apply_template(pe_as_vba)
+  
+  # Write the result to file 
   out_filename = "%s.vba" % (args.pe_file)
   out_file = open(out_filename , "w") 
-  out_file.write(pe_to_vba(pe)) 
+  out_file.write(out_file_content) 
   out_file.close()
-  
-  if isfile(out_filename): 
+
+  if os.path.isfile(out_filename): 
     print("[+] Created file '%s'." % (out_filename))
   
   return 
