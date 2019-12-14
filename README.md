@@ -9,7 +9,9 @@ https://itm4n.github.io/vba-runpe-part2/
 
 ![Win10_x64_Office2016_x64_PowerShell](https://github.com/itm4n/VBA-RunPE/raw/master/screenshots/00_runpe-demo.gif)
 
+
 ## Usage 1 - PE file on disk 
+
 1) In the `Exploit` procedure at the end of the code, set the path of the file you want to execute. 
 ```
 strSrcFile = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -30,7 +32,8 @@ C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -exec Bypass
 3) (Optional) Enable __View__ > __Immediate Window__ (`Ctrl+G`) to check execution and error logs.
 4) Run the `Exploit` macro!
 
-## Usage 2 - Embedded PE 
+
+## Usage 2 -Embedded PE 
 1) Use `pe2vba.py` to convert a PE file to VBA. This way, it can be directly embedded into the macro. 
 ```
 user@host:~/Tools/VBA-RunPE$ ./pe2vba.py meterpreter.exe 
@@ -43,22 +46,28 @@ user@host:~/Tools/VBA-RunPE$ ./pe2vba.py meterpreter.exe
 ' ================================================================================
 
 ' CODE GENRATED BY PE2VBA
+' ===== BEGIN PE2VBA =====
 Private Function PE() As String
     Dim strPE As String
     strPE = ""
     PE = strPE
 End Function
+' ===== END PE2VBA =====
 ```
 3) (Optional) Enable __View__ > __Immediate Window__ (`Ctrl+G`) to check execution and error logs.
 4) Run the `Exploit` macro!
 
 __/!\\__ When using an embedded PE, the macro will automatically switch to this mode because the `PE()` method will return a non-empty string. 
 
-## Credits
-This code is mainly a VBA adaptation of the C++ implementation published by @Zer0Mem0ry (32 bits only).
-https://github.com/Zer0Mem0ry/RunPE
 
-The PE embedding method was inspired by @DidierStevens' work. https://blog.didierstevens.com/
+## Credits
+
+[@hasherezade](https://twitter.com/hasherezade) - Complete RunPE implementation (https://github.com/hasherezade/)
+
+[@Zer0Mem0ry](https://github.com/Zer0Mem0ry) - 32 bits RunPE written in C++ (https://github.com/Zer0Mem0ry/RunPE)
+
+[@DidierStevens](https://twitter.com/didierstevens) - PE embedding in VBA
+
 
 ## Misc
 
@@ -94,3 +103,20 @@ As mentionned in the description, this code only works with Office 2010 and abov
 So, if you try to run this code in Office 2007, you will get a `User-defined type not defined` error message for each variable using the `LongPtr` type. To work around this issue, you can replace all the `LongPtr` occurences with `Long` (32-bits) or `LongLong` (64-bits). Use `Ctrl+H` in your favorite text editor! ;)
 
 Note: the code could be updated to take this compatibility issue into account but it would require too much effort for relatively little gain.
+
+### Known issues
+
+- `GetThreadContext()` fails.
+
+You might get this error if you run this macro from a __64-bits version of Office__. __As a workaround__, you can move the code to __a module__ rather than executing it from the Word Object references. Thanks [@joeminicucci](https://github.com/joeminicucci) for the tip.
+
+```
+================================================================================
+[*] Source file: 'C:\Windows\System32\cmd.exe'
+[*] Checking source PE...
+[*] Creating new process in suspended state...
+[*] Retrieving the context of the main thread...
+    |__ GetThreadContext() failed (Err: 998)
+```
+
+I have no idea why this workaround works for the moment. I've investigated this a bit though. This error seems to be caused by the `CONTEXT` structure not being properly aligned in the 64-bits version. I noticed that the size of the structure is incorrect (`[VBA] LenB(CONTEXT) != [C++] sizeof(CONTEXT)`) whereas it's fine in the 32-bits version. I have a working solution that allows the `GetThreadContext()`to return properly but then it breaks some other stuff further in the execution. 
