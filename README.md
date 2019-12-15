@@ -13,33 +13,46 @@ https://itm4n.github.io/vba-runpe-part2/
 ## Usage 1 - PE file on disk 
 
 1) In the `Exploit` procedure at the end of the code, set the path of the file you want to execute. 
+
 ```
 strSrcFile = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 ```
+
 __/!\\__ If you're using a 32 bits version of Microsoft Office on a 64 bits OS, you must specify 32 bits binaries. 
+
 ```
 strSrcFile = "C:\Windows\SysWOW64\cmd.exe"
 strSrcFile = "C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
 ```
+
 2) Specify the command line arguments (optional).
+
 ```
 strArguments = "-exec Bypass"
 ```
+
 This will be used to form a command line equivalent to:
+
 ```
 C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -exec Bypass
 ```
+
 3) (Optional) Enable __View__ > __Immediate Window__ (`Ctrl+G`) to check execution and error logs.
+
 4) Run the `Exploit` macro!
 
 
 ## Usage 2 -Embedded PE 
-1) Use `pe2vba.py` to convert a PE file to VBA. This way, it can be directly embedded into the macro. 
+
+1. Use `pe2vba.py` to convert a PE file to VBA. This way, it can be directly embedded into the macro.
+
 ```
 user@host:~/Tools/VBA-RunPE$ ./pe2vba.py meterpreter.exe 
 [+] Created file 'meterpreter.exe.vba'.
 ```
-2) ~~Replace the following code in `RunPE.vba` with the the content of the `.vba` file which was generated in the previous step.~~ The Python script converts the PE to VBA and applies the RunPE template automatically (no need to copy/paste manually). 
+
+2. ~~Replace the following code in `RunPE.vba` with the the content of the `.vba` file which was generated in the previous step.~~ The Python script converts the PE to VBA and applies the RunPE template automatically (no need to copy/paste manually).
+
 ```
 ' ================================================================================
 '                                ~~~ EMBEDDED PE ~~~
@@ -54,10 +67,35 @@ Private Function PE() As String
 End Function
 ' ===== END PE2VBA =====
 ```
-3) (Optional) Enable __View__ > __Immediate Window__ (`Ctrl+G`) to check execution and error logs.
-4) Run the `Exploit` macro!
+3. (Optional) Enable __View__ > __Immediate Window__ (`Ctrl+G`) to check execution and error logs.
 
-__/!\\__ When using an embedded PE, the macro will automatically switch to this mode because the `PE()` method will return a non-empty string. 
+4. Run the `Exploit` macro!
+
+__/!\\__ When using an embedded PE, the macro will automatically switch to this mode because the `PE()` method will return a non-empty string.
+
+
+## Known issues
+
+- __`GetThreadContext()` fails with error code 998.__
+
+You might get this error if you run this macro from a __64-bits version of Office__. __As a workaround__, you can move the code to __a module__ rather than executing it from the Word Object references. Thanks [@joeminicucci](https://github.com/joeminicucci) for the tip.
+
+```
+================================================================================
+[*] Source file: 'C:\Windows\System32\cmd.exe'
+[*] Checking source PE...
+[*] Creating new process in suspended state...
+[*] Retrieving the context of the main thread...
+    |__ GetThreadContext() failed (Err: 998)
+```
+
+I have no idea why this workaround works for the moment. I've investigated this a bit though. This error seems to be caused by the `CONTEXT` structure not being properly aligned in the 64-bits version. I noticed that the size of the structure is incorrect (`[VBA] LenB(CONTEXT) != [C++] sizeof(CONTEXT)`) whereas it's fine in the 32-bits version. I have a working solution that allows the `GetThreadContext()`to return properly but then it breaks some other stuff further in the execution. 
+
+- __`LongPtr` - _User Defined Type Not Defined___
+
+If you get this error, it means that you are running the macro from an old version of Office (<=2007). The `LongPtr` type was introduced in VBA7 (Office 2010) along with the support of the 64-bits Windows API. It's very useful for handling pointers without having to worry about the architecture (32-bits / 64-bits).
+
+As a workaround, you can replace all the `LongPtr` occurences with `Long` (32-bits) or `LongLong` (64-bits). Use `Ctrl+H` in your favorite text editor.
 
 
 ## Credits
@@ -72,15 +110,15 @@ __/!\\__ When using an embedded PE, the macro will automatically switch to this 
 ## Misc
 
 ### Tests
+
 This code was tested on the following platforms:
 - Windows 7 Pro 32 bits + Office 2010 32 bits
 - Windows 7 Pro 64 bits + Office 2016 32 bits
 - Windows 2008 R2 64 bits + Office 2010 64 bits
 - Windows 10 Pro 64 bits + Office 2016 64 bits
 
-Currently, this doesn't work with all Windows binaries. For example, it can't be used to run _regedit.exe_. I guess I need to do some manual imports of missing DLLs.
-
 ### Side notes
+
 Here is a table of correspondence between some Win32 and VBA types:
 
 | C++ | VBA | Arch |
@@ -95,28 +133,3 @@ Here is a table of correspondence between some Win32 and VBA types:
 
 (\*) LongPtr is a "dynamic" type, it is 4 Bytes long in Office 32 bits and 8 Bytes long in Office 64 bits. 
 https://msdn.microsoft.com/fr-fr/library/office/ee691831(v=office.14).aspx 
-
-### What about older versions of Microsoft Office (<=2007)?
-
-As mentionned in the description, this code only works with Office 2010 and above. The reason for this is that the `LongPtr` type is extensively used. It was first introduced in Office 2010 to help developers make architecture independant code. Indeed, as described above, its size will be automatically adapted depending on the architecture of the Office process (32-bits / 64-bits).
-
-So, if you try to run this code in Office 2007, you will get a `User-defined type not defined` error message for each variable using the `LongPtr` type. To work around this issue, you can replace all the `LongPtr` occurences with `Long` (32-bits) or `LongLong` (64-bits). Use `Ctrl+H` in your favorite text editor! ;)
-
-Note: the code could be updated to take this compatibility issue into account but it would require too much effort for relatively little gain.
-
-### Known issues
-
-- `GetThreadContext()` fails.
-
-You might get this error if you run this macro from a __64-bits version of Office__. __As a workaround__, you can move the code to __a module__ rather than executing it from the Word Object references. Thanks [@joeminicucci](https://github.com/joeminicucci) for the tip.
-
-```
-================================================================================
-[*] Source file: 'C:\Windows\System32\cmd.exe'
-[*] Checking source PE...
-[*] Creating new process in suspended state...
-[*] Retrieving the context of the main thread...
-    |__ GetThreadContext() failed (Err: 998)
-```
-
-I have no idea why this workaround works for the moment. I've investigated this a bit though. This error seems to be caused by the `CONTEXT` structure not being properly aligned in the 64-bits version. I noticed that the size of the structure is incorrect (`[VBA] LenB(CONTEXT) != [C++] sizeof(CONTEXT)`) whereas it's fine in the 32-bits version. I have a working solution that allows the `GetThreadContext()`to return properly but then it breaks some other stuff further in the execution. 
