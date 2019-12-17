@@ -78,7 +78,7 @@ __/!\\__ When using an embedded PE, the macro will automatically switch to this 
 
 - __`GetThreadContext()` fails with error code 998.__
 
-You might get this error if you run this macro from a __64-bits version of Office__. __As a workaround__, you can move the code to __a module__ rather than executing it from the Word Object references. Thanks [@joeminicucci](https://github.com/joeminicucci) for the tip.
+You might get this error if you run this macro from a __64-bits version of Office__. ~~__As a workaround__, you can move the code to __a module__ rather than executing it from the Word Object references. Thanks [@joeminicucci](https://github.com/joeminicucci) for the tip.~~
 
 ```
 ================================================================================
@@ -89,11 +89,11 @@ You might get this error if you run this macro from a __64-bits version of Offic
     |__ GetThreadContext() failed (Err: 998)
 ```
 
-I have no idea why this workaround works for the moment. I've investigated this a bit though. This error seems to be caused by the `CONTEXT` structure not being properly aligned in the 64-bits version. I noticed that the size of the structure is incorrect (`[VBA] LenB(CONTEXT) != [C++] sizeof(CONTEXT)`) whereas it's fine in the 32-bits version. I have a working solution that allows the `GetThreadContext()` to return properly but then it breaks some other stuff further in the execution. 
+~~I have no idea why this workaround works for the moment. I've investigated this a bit though.~~ This error seems to be caused by the `CONTEXT` structure not being properly aligned in the 64-bits version. I noticed that the size of the structure is also incorrect (`[VBA] LenB(CONTEXT) != [C++] sizeof(CONTEXT)`) whereas it's fine in the 32-bits version. I have a working solution that allows the `GetThreadContext()` to return properly but then it breaks some other stuff further in the execution. 
 
 __Edit 2019-12-15__: the definition of the 64-bits version of the `CONTEXT` structure was indeed incorrect but fixing this didn't fix the bug. So, I implemented a workaround for the 64-bits version. I replaced the `CONTEXT` structure argument of the `GetThreadContext()` and `SetThreadContext()` functions with a `Byte` Array of the same size. 
 
-__Edit 2019-12-17__: I finally found the problem. The `CONTEXT` structure must be 16-Bytes aligned in memory. This is something you can control in C by using `align(16)` in the definition of the structure but you can't control that in VBA. Therefore, `GetThreadContext()` and `SetThreadContext()` may "randomly" fail. `Byte` Arrays on the other hand seem to always be 16-Bytes aligned, that's why this workaround is effective but there is no guarantee, unless I reverse engineer the VBA interpreter/compiler and figure it out?!
+__Edit 2019-12-17__: I finally found the problem. My first assumption was correct, the `CONTEXT` structure must be 16-Bytes aligned in memory. This is something you can control in C by using `align(16)` in the definition of the structure but you can't control that in VBA. Therefore, `GetThreadContext()` and `SetThreadContext()` may "randomly" fail. `Byte` Arrays on the other hand seem to always be 16-Bytes aligned, that's why this workaround is effective but there is no guarantee, unless I reverse engineer the VBA interpreter/compiler and figure it out?!
 
 - __`LongPtr` - _User Defined Type Not Defined___
 
